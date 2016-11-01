@@ -6,6 +6,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.ProgressBar;
 
+import com.trello.rxlifecycle.android.ActivityEvent;
 import com.trello.rxlifecycle.components.support.RxAppCompatActivity;
 
 import rx.Observable;
@@ -24,8 +25,10 @@ public class MainActivity extends RxAppCompatActivity {
         findViewById(R.id.button4).setOnClickListener(v -> rx4());
         findViewById(R.id.button5).setOnClickListener(v -> rx5());
         findViewById(R.id.button6).setOnClickListener(v -> rx6());
+        findViewById(R.id.button7).setOnClickListener(v -> rx7());
     }
 
+    // 基本的訂閱
     private void rx1() {
         Log.d("MainActivity", "rx1");
         int a = 0;
@@ -33,6 +36,7 @@ public class MainActivity extends RxAppCompatActivity {
                 .subscribe(s -> System.out.println(s));
     }
 
+    // map + thread 切換
     private void rx2() {
         Log.d("MainActivity", "rx2");
         int a = 0;
@@ -47,6 +51,7 @@ public class MainActivity extends RxAppCompatActivity {
                 .subscribe(s -> System.out.println(s));
     }
 
+    // lambda 用法, doOnSubscribe, doOnUnSubscribe
     private void rx3() {
         Log.d("MainActivity", "rx3");
         int a = 0;
@@ -60,15 +65,14 @@ public class MainActivity extends RxAppCompatActivity {
                 })
                 .map(this::appendC)
                 .observeOn(AndroidSchedulers.mainThread())
-                .doOnSubscribe(() -> {
-                    pd.show();
-                })
+                .doOnSubscribe(() -> pd.show())
+                .doOnUnsubscribe(() -> pd.dismiss())
                 .subscribe(s -> {
-                    pd.dismiss();
                     Log.d("MainActivity", s);
                 });
     }
 
+    // just 的 emit 是無法改變 thread 的
     private void rx4() {
         Log.d("MainActivity", "rx4");
         Observable.just(createString())
@@ -77,7 +81,9 @@ public class MainActivity extends RxAppCompatActivity {
                 .subscribe(System.out::println);
     }
 
+    // 例外處理
     private void rx5() {
+        Log.d("MainActivity", "rx5");
         Observable.just("will not see this")
                 .map(n -> {
                     Log.d("MainActivity", "throw ex");
@@ -93,9 +99,41 @@ public class MainActivity extends RxAppCompatActivity {
                 );
     }
 
+    // 使用回傳 observable 的 function 訂閱
     private void rx6() {
+        Log.d("MainActivity", "rx6");
         getString()
                 .subscribe(System.out::println);
+    }
+
+    // lifecycle binding
+    private void rx7() {
+        Log.d("MainActivity", "rx7");
+        ProgressDialog pd = new ProgressDialog(this);
+        Observable.just("OK")
+                .map(n -> {
+                    Log.d("MainActivity", "map");
+                    sleep(5000);
+                    return n;
+                })
+                .subscribeOn(Schedulers.newThread())
+                .doOnSubscribe(pd::show)
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnUnsubscribe(pd::dismiss)
+                .compose(this.bindUntilEvent(ActivityEvent.STOP))
+                .subscribe(
+                        System.out::println,
+                        System.out::println,
+                        () -> Log.d("MainActivity", "on com"));
+
+    }
+
+    private void sleep(int millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private Observable<String> getString() {
@@ -110,31 +148,19 @@ public class MainActivity extends RxAppCompatActivity {
 
     private String appendA(String s) {
         Log.d("MainActivity", "appendA()");
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        sleep(1000);
         return s + "A";
     }
 
     private String appendB(String s) {
         Log.d("MainActivity", "appendB()");
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        sleep(1000);
         return s + "B";
     }
 
     private String appendC(String s) {
         Log.d("MainActivity", "appendC()");
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        sleep(1000);
         return s + "C";
     }
 }
