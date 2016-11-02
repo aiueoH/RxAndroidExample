@@ -106,6 +106,33 @@ public class MainActivityTest {
         println("test4 end");
     }
 
+    // 平行處理
+    @Test
+    public void test5() {
+        println("test5 start");
+        Observable.range(1, 5)
+                .flatMap(n -> {
+                    return Observable.just(n)
+                            .map(nn -> {
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                return nn;
+                            })
+                            .doOnSubscribe(() -> println(String.valueOf(n)))
+                            .subscribeOn(Schedulers.newThread());
+                })
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(Schedulers.newThread())
+                .toBlocking()
+                .forEach(n -> {
+                    println("sub " + n);
+                });
+        println("test5 end");
+    }
+
     private void println(String s) {
         long id = Thread.currentThread().getId();
         System.out.println(String.format("[Thread %3d] : %s", id, s));
