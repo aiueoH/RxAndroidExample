@@ -6,8 +6,11 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.ProgressBar;
 
+import com.jakewharton.rxbinding.view.RxView;
 import com.trello.rxlifecycle.android.ActivityEvent;
 import com.trello.rxlifecycle.components.support.RxAppCompatActivity;
+
+import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
@@ -26,7 +29,12 @@ public class MainActivity extends RxAppCompatActivity {
         findViewById(R.id.button5).setOnClickListener(v -> rx5());
         findViewById(R.id.button6).setOnClickListener(v -> rx6());
         findViewById(R.id.button7).setOnClickListener(v -> rx7());
-    }
+        RxView.clicks(findViewById(R.id.button8))
+                .throttleFirst(5, TimeUnit.SECONDS)
+                .subscribe(v -> {
+                    Log.d("MainActivity", "click");
+                });
+   }
 
     // 基本的訂閱
     private void rx1() {
